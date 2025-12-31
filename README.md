@@ -12,7 +12,7 @@ Dieses Projekt synchronisiert automatisch deine **Sport-Aktivitäten** und **Ges
 - **Sport-Sync:** Erfasst Distanz, Zeit, Pace, Herzfrequenz und Höhenmeter.
 - **Health-Sync:** Synchronisiert täglich Gewicht, Schritte, Schlafqualität, Ruhepuls und HRV.
 - **Blutdruck-Spezial:** Unterstützt das Auslesen von manuell in Garmin Connect eingetragenen Blutdruckwerten.
-- **Multisport-Support:** werden als eine Aktivität ausgegeben.
+- **Multisport-Support:** Multisport-Events (z. B. Triathlons) werden kompakt in einer Zeile zusammengefasst.
 - **Ausgabe-Sportspezifische Pace:** Laufen km/min,Rad km/h u. Schwimmen min/100m in eigener spalte
 
 ## 🛠 Setup & Installation
