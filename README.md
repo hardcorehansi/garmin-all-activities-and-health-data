@@ -1,0 +1,1 @@
+# garmin-all-activities-and-health-data
