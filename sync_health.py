@@ -11,11 +11,11 @@ def get_garmin_client():
     client.login()
     return client
 
-def minutes_to_hm(minutes):
-    if not minutes or minutes == 0: return "00:00"
-    td = str(timedelta(seconds=int(float(minutes) * 60)))
-    parts = td.split(':')
-    return f"{parts[0].zfill(2)}:{parts[1]}"
+# Release 2: Angepasst auf HH:MM:SS Format
+def minutes_to_hms(minutes):
+    if not minutes or minutes == 0: return "00:00:00"
+    seconds = int(float(minutes) * 60)
+    return str(timedelta(seconds=seconds)).zfill(8)
 
 def sync_health():
     lookback_days = 7
@@ -48,6 +48,7 @@ def sync_health():
 
         try:
             body = client.get_body_composition(target_date)
+            # Gewicht wird oft in Gramm geliefert, daher / 1000
             weight = body.get('totalAverage', {}).get('weight', 0) / 1000
             if weight > 0: any_data = True
         except: pass
@@ -81,7 +82,11 @@ def sync_health():
         except: pass
 
         if any_data:
-            health_sheet.append_row([target_date, round(weight, 2), steps, minutes_to_hm(sleep_min), rhr, hrv, bp_sys, bp_dia])
+            # Release 2: USER_ENTERED für Datum & Zeitdauer Erkennung
+            health_sheet.append_row(
+                [target_date, round(weight, 2), steps, minutes_to_hms(sleep_min), rhr, hrv, bp_sys, bp_dia],
+                value_input_option='USER_ENTERED'
+            )
             print(f"  ✅ OK")
         
         time.sleep(2)
