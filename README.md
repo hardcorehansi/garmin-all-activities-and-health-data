@@ -2,6 +2,7 @@
 
 ![AI-Powered](https://img.shields.io/badge/Developed%20with-Google%20Gemini-blue?style=for-the-badge&logo=googlegemini)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/hardcorehansi/garmin-all-activities-and-health-data?style=for-the-badge&color=orange)
 
 Dieses Projekt synchronisiert automatisch deine **Sport-Aktivitäten** und **Gesundheitsdaten** (Gewicht, Schlaf, HRV, Blutdruck) von Garmin Connect in ein Google Spreadsheet. Die Automatisierung läuft über **GitHub Actions**, sodass kein eigener Server benötigt wird.
 
