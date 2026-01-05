@@ -79,6 +79,20 @@ def sync_activities():
             type_key = act.get('activityType', {}).get('typeKey', '').lower()
             avg_speed_ms = round(act.get('averageSpeed', 0), 3)
             
+            # Release 2: Multisport-Cadence & SWOLF für Spalte I
+            swolf = act.get('averageSwolf')
+            cadence = (
+                act.get('averageRunningCadenceInStepsPerMinute') or 
+                act.get('averageCadence') or 
+                act.get('averageBikingCadenceInRevPerMinute') or 
+                0
+            )
+            
+            if "swimming" in type_key and swolf:
+                value_col_i = round(swolf, 0)
+            else:
+                value_col_i = round(cadence, 0) if cadence else 0
+
             pace_run = ""
             speed_bike = ""
             pace_swim = ""
@@ -91,32 +105,32 @@ def sync_activities():
                 pace_swim = format_swim_pace(avg_speed_ms)
 
             new_rows.append([
-                start_time_str[:10],           # A: Datum
-                act.get('activityName', '-'),  # B: Name
-                type_key,                      # C: Typ
+                start_time_str[:10],                # A: Datum (Release 2)
+                act.get('activityName', '-'),       # B: Name
+                type_key,                           # C: Typ
                 round(act.get('distance', 0) / 1000, 2), # D: Distanz km
                 seconds_to_hms(act.get('duration', 0)),  # E: Zeit
-                act.get('calories', 0),        # F: Kalorien
-                act.get('averageHR', 0),       # G: Ø Puls
-                act.get('maxHR', 0),           # H: Max Puls
-                0,                             # I: Gewicht
+                act.get('calories', 0),             # F: Kalorien
+                act.get('averageHR', 0),            # G: Ø Puls
+                act.get('maxHR', 0),                # H: Max Puls
+                value_col_i,                        # I: Cadence/SWOLF (Release 2)
                 round(act.get('elevationGain', 0), 0), # J: HM
-                act_id,                        # K: ID
-                avg_speed_ms,                  # L: m/s
-                pace_run,                      # M: Pace Run
-                speed_bike,                    # N: km/h Bike
-                pace_swim                      # O: Pace Swim
+                act_id,                             # K: ID
+                avg_speed_ms,                       # L: m/s
+                pace_run,                           # M: Pace Run
+                speed_bike,                         # N: km/h Bike
+                pace_swim                           # O: Pace Swim
             ])
             existing_ids.append(act_id)
 
         if new_rows:
-            # Wir drehen die neuen Reihen um, damit die ältesten zuerst kommen beim Anhängen
             new_rows.reverse() 
-            sport_sheet.append_rows(new_rows)
+            # Release 2: USER_ENTERED für Google Sheets Erkennung
+            sport_sheet.append_rows(new_rows, value_input_option='USER_ENTERED')
             print(f"  ✅ {len(new_rows)} Aktivitäten hinzugefügt.")
         
         if should_continue:
-            time.sleep(2) # Kurz warten, um API-Limits zu respektieren
+            time.sleep(1.5) # Kurz warten, um API-Limits zu respektieren
             start_index += batch_size
 
     print("🎉 Vollständiger Historien-Sync abgeschlossen!")
