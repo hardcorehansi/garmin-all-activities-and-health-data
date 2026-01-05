@@ -11,26 +11,25 @@ def get_garmin_client():
     client.login()
     return client
 
-def minutes_to_hm(minutes):
+# Release 2: Angepasst auf HH:MM:SS Format
+def minutes_to_hms(minutes):
     try:
-        if not minutes or minutes == 0: return "00:00"
+        if not minutes or minutes == 0: return "00:00:00"
         total_seconds = int(float(minutes) * 60)
-        td = str(timedelta(seconds=total_seconds))
-        parts = td.split(':')
-        return f"{parts[0].zfill(2)}:{parts[1]}"
+        # timedelta erzeugt HH:MM:SS, zfill sorgt für führende Nullen
+        return str(timedelta(seconds=total_seconds)).zfill(8)
     except:
-        return "00:00"
+        return "00:00:00"
 
 def sync_health():
     # --- DATUMSBEREICH EINSTELLEN ---
-    # Hier kannst du festlegen, von wann bis wann gesynct werden soll
-    start_date_str = "2022-01-01"  # DEIN START (VON)
-    end_date_str = "2023-12-31"    # DEIN ENDE (BIS)
+    start_date_str = "2024-01-01"  # DEIN START (VON)
+    end_date_str = "2026-12-31"    # DEIN ENDE (BIS)
     
     start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
     end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
     
-    print(f"🚀 Starte Health Sync von {start_date_str} bis {end_date_str}...")
+    print(f"🚀 Starte Deep Health Sync von {start_date_str} bis {end_date_str}...")
     
     try:
         client = get_garmin_client()
@@ -49,7 +48,6 @@ def sync_health():
     # Vorhandene Daten laden um Dubletten zu vermeiden
     existing_dates = [row[0] for row in health_sheet.get_all_values()]
 
-    # Wir gehen Tag für Tag durch den Bereich
     current_date = start_date
     while current_date <= end_date:
         target_date = current_date.strftime("%Y-%m-%d")
@@ -93,7 +91,7 @@ def sync_health():
             if hrv > 0: any_data = True
         except: pass
 
-        # 5. BLUTDRUCK (Fix für manuelle Einträge)
+        # 5. BLUTDRUCK
         try:
             bp_data = client.get_blood_pressure(target_date)
             summaries = bp_data.get('measurementSummaries', [])
@@ -107,18 +105,25 @@ def sync_health():
 
         # Speichern wenn Daten vorhanden
         if any_data:
+            # Release 2: USER_ENTERED für automatische Datum- und Zeit-Erkennung
             health_sheet.append_row([
-                target_date, round(weight, 2), steps, 
-                minutes_to_hm(sleep_min), rhr, hrv, bp_sys, bp_dia
-            ])
+                target_date, 
+                round(weight, 2), 
+                steps, 
+                minutes_to_hms(sleep_min), 
+                rhr, 
+                hrv, 
+                bp_sys, 
+                bp_dia
+            ], value_input_option='USER_ENTERED')
             print(f"  ✅ Daten gespeichert.")
         else:
             print(f"  💤 Keine Daten gefunden.")
 
-        time.sleep(2) # Pause für Garmin API
+        time.sleep(1) # Kleine Pause für API Stabilität
         current_date += timedelta(days=1)
 
-    print(f"🎉 Health Sync für den Zeitraum abgeschlossen!")
+    print(f"🎉 Deep Health Sync abgeschlossen!")
 
 if __name__ == "__main__":
     sync_health()
