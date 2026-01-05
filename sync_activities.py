@@ -33,6 +33,7 @@ def sync_activities():
     print(f"🚀 Starte Daily Sport Sync (Letzte {lookback_days} Tage)...")
     client = get_garmin_client()
     
+    # Google Sheets Auth
     gc = gspread.authorize(Credentials.from_service_account_info(
         json.loads(os.environ.get('GOOGLE_CREDENTIALS')), 
         scopes=['https://www.googleapis.com/auth/spreadsheets']
@@ -40,15 +41,19 @@ def sync_activities():
     sh = gc.open_by_key(os.environ.get('SHEET_ID'))
     sport_sheet = sh.worksheet("Sport")
 
+    # Vorhandene IDs laden
     all_rows = sport_sheet.get_all_values()
     existing_ids = [row[10] for row in all_rows if len(row) > 10]
     
-    # Wir laden die letzten 50 Aktivitäten (sollte für 7 Tage locker reichen)
     activities = client.get_activities(0, 50)
     new_rows = []
 
     for act in activities:
         start_time_str = act.get('startTimeLocal', '')
+        if not start_time_str:
+            continue
+
+        # Release 2: Sauberes Datums-Parsing
         act_date = datetime.strptime(start_time_str[:10], '%Y-%m-%d')
         
         if act_date < stop_date:
@@ -59,23 +64,52 @@ def sync_activities():
             continue
 
         type_key = act.get('activityType', {}).get('typeKey', '').lower()
-        avg_speed_ms = round(act.get('averageSpeed', 0), 3)
         
+        # Release 2: Cadence & SWOLF Logik für Spalte I
+        # 1. Prüfen auf Schwimmen -> SWOLF
+        # 2. Prüfen auf Laufen/Rad -> Cadence
+        swolf = act.get('averageSwolf')
+        cadence = (
+            act.get('averageRunningCadenceInStepsPerMinute') or 
+            act.get('averageCadence') or 
+            act.get('averageBikingCadenceInRevPerMinute') or 
+            0
+        )
+        
+        # Wert für Spalte I entscheiden
+        if "swimming" in type_key and swolf:
+            value_col_i = round(swolf, 0)
+        else:
+            value_col_i = round(cadence, 0) if cadence else 0
+
+        avg_speed_ms = round(act.get('averageSpeed', 0), 3)
         pace_run = format_run_pace(avg_speed_ms) if "running" in type_key else ""
         speed_bike = round(avg_speed_ms * 3.6, 2) if any(x in type_key for x in ["cycling", "biking"]) else ""
         pace_swim = format_swim_pace(avg_speed_ms) if "swimming" in type_key else ""
 
+        # Zeile vorbereiten
         new_rows.append([
-            start_time_str[:10], act.get('activityName', '-'), type_key,
-            round(act.get('distance', 0) / 1000, 2), seconds_to_hms(act.get('duration', 0)),
-            act.get('calories', 0), act.get('averageHR', 0), act.get('maxHR', 0),
-            0, round(act.get('elevationGain', 0), 0), act_id,
-            avg_speed_ms, pace_run, speed_bike, pace_swim
+            start_time_str[:10],                # Release 2: Datum (ISO)
+            act.get('activityName', '-'),
+            type_key,
+            round(act.get('distance', 0) / 1000, 2),
+            seconds_to_hms(act.get('duration', 0)),
+            act.get('calories', 0),
+            act.get('averageHR', 0),
+            act.get('maxHR', 0),
+            value_col_i,                        # Release 2: SWOLF (Schwimmen) oder Cadence (Rad/Lauf)
+            round(act.get('elevationGain', 0), 0),
+            act_id,
+            avg_speed_ms,
+            pace_run,
+            speed_bike,
+            pace_swim
         ])
 
     if new_rows:
         new_rows.reverse()
-        sport_sheet.append_rows(new_rows)
+        # Release 2: USER_ENTERED für automatische Typ-Erkennung
+        sport_sheet.append_rows(new_rows, value_input_option='USER_ENTERED')
         print(f"  ✅ {len(new_rows)} neue Aktivitäten hinzugefügt.")
     else:
         print("  💤 Alles aktuell.")
